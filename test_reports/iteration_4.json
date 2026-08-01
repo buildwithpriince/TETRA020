@@ -1,0 +1,29 @@
+{
+  "summary": "Verified iteration_4 fixes: (1) parsers.py rewrite for multi-sheet detection and (2) Firebase auth code review. All 42 tests pass against the live preview URL. 22 detection unit tests (filename hints + real fixtures + multi-sheet workbook with generic filename + MIS-named same workbook) all pass. Full pipeline on clean and messy sample sets confirms every one of the 5 canonical columns (pitch_deck, mis, financials, projections, cap_table) is populated in the matrix, and the messy cap_table column now contains founder ownership / ESOP / cap-table rows (previously empty). Firebase/AuthContext code review: `grep -rEn 'localhost|127.0.0.1|redirectUri|signInWithRedirect' /app/frontend/src/` returned ZERO hits. authDomain is entirely env-driven (VITE_FIREBASE_AUTH_DOMAIN=prism-4f023.firebaseapp.com), and signInWithPopup is used (no redirect-URI whitelist needed). Preview URL loads with correct <title>Prism — Diligence, made consistent</title>. Regression suite (test_prism_api.py + test_sample_endpoint.py) fully green.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_detection.py",
+    "/app/backend/tests/test_matrix_population.py",
+    "/app/backend/tests/test_prism_api.py",
+    "/app/backend/tests/test_sample_endpoint.py",
+    "/app/test_reports/pytest/iter4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "parsers._score_filename: confidence is only 0.75 vs 0.9 based purely on runner-up ratio. For long distinctive filenames like 'monthly_mis_dashboard.xlsx' this still yields 0.9 due to 'mis'(1)+'monthly'(1)+'mis dashboard'(2) vs no runner-up — OK. But for `Northwind_MIS_FY24.xlsx`, only 'mis'(1) hits with no runner-up, so conf=0.9. Fine for now; consider capping filename-only confidence at 0.85 to give content a chance to disagree when the file has clearly conflicting content (e.g., a workbook mislabeled as MIS but full of forecast data).",
+    "parsers._score_text: cap_table override triggers on `%` + 2 cap-table keyword hits; the keyword list contains 'shares' which appears in many pitch decks ('shares outstanding' etc.). Low risk (needs 2 hits) but monitor for false positives.",
+    "parsers.py has no explicit unit tests inside the module; the new /app/backend/tests/test_detection.py file addresses this — keep as canonical regression."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_detection.py (new)",
+    "/app/backend/tests/test_matrix_population.py (new)"
+  ],
+  "success_rate": {"backend": "100% (42/42: 22 detection + 3 pipeline + 12 regression prism + 5 sample)", "frontend": "code-review only: no frontend files changed; preview URL loads; Firebase config env-driven, no hardcoded redirects/localhost."},
+  "test_credentials": "Authorization: Bearer demo-token (anonymous also accepted).",
+  "seed_data_creation": "Multi-sheet workbook fixture built in tmp_path via openpyxl inside test_detection.py (sheets: 'MIS Dashboard', 'Projections FY26-27', 'Notes').",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 42 backend tests green against https://prism-check-1.preview.emergentagent.com. Detection: filename-first strategy is working — every requested filename edge case (Northwind_MIS_FY24.xlsx -> mis, 5yr_forecast.xlsx -> projections, shareholding.csv -> cap_table, Acme_AuditedFinancials.pdf -> financials, monthly_mis_dashboard.xlsx -> mis) verified. Multi-sheet workbook with generic filename ('startup_report.xlsx' containing MIS Dashboard + Projections FY26-27 sheets) classifies to mis|projections with confidence >=0.5 (never None/unknown). Cap_table column population fix verified — messy pipeline now returns founder ownership/ESOP rows. Gemini rate-limit is a real concern for parallel test runs; matrix_population runs serially and completes in ~60s.",
+  "rca of the issue": "Bug 1 root cause: previous detect_type_from_content sampled only the ACTIVE sheet's first row of xlsx workbooks, so a workbook titled MIS but whose first tab happened to be a projections summary got misclassified as projections. Downstream Gemini extraction then filed burn/CAC/LTV/revenue rows under the projections column and left cap_table empty. Fix (verified): _sample_xlsx_text now concatenates every sheet's title + top ~6 rows across up to 8 sheets, and _score_filename gives filename a strong voice via _combine (filename conf >=0.9 wins). Bug 2 root cause: none — code review of AuthContext.tsx + config.ts confirmed all Firebase config is read from VITE_FIREBASE_* env vars and signInWithPopup is used (no redirectUri). User's addition of the live domain to Firebase Console authorized domains is sufficient."
+}

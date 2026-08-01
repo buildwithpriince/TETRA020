@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: prism-backend
+    env_file: ./backend/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend/storage:/app/storage
+      - ./backend/prism.db:/app/prism.db
+    networks:
+      - prism-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: prism-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - prism-net
+
+networks:
+  prism-net:
+    driver: bridge

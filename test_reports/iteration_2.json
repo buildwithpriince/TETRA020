@@ -1,0 +1,39 @@
+{
+  "summary": "Verified the preview-not-loading fix. https://prism-check-1.preview.emergentagent.com/ now loads cleanly (Cloudflare challenge clears in ~2s), title 'Prism — Diligence, made consistent' renders, #root has ~28.7k chars of markup, and hero copy 'The numbers should add up' plus 'CROSS-DOCUMENT CONSISTENCY CHECKER', 'Run a diligence check', 'View sample report', 'Sign in with Google' are all visible. All 5 nav routes (/, /upload, /dashboard, /privacy, /terms) render properly. Backend reachable through the ingress: re-ran the full pytest suite against the public URL — 12/12 pass in ~12s, including the full happy-path e2e (upload -> analyze -> poll -> report -> PDF download). Preview-loading bug is fixed. Discovered a pre-existing (unrelated) frontend bug in the sample-company loader.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/upload", "issue": "Still returns 422 (FastAPI-native) when no valid UploadFile is provided; unchanged from iteration_1."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Upload.tsx — 'Load sample company' / 'Clean startup' / 'Messy startup' buttons", "issue": "In real (non-mock) mode, frontend/src/api/client.ts uploadDocuments() falls into the else branch and calls formData.append('files', f.filename), i.e. it POSTs the filename as a plain string. Backend expects UploadFile and responds 422 with pydantic 'Expected UploadFile, received: <class str>' for every file. Result: all three one-click sample buttons on /upload are non-functional against the live backend. Reproduced by clicking 'Load sample company' — API 422 error is even rendered on screen.", "selector": "button:has-text('Load sample company')", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "One-click sample company / clean / messy startup demo", "issue": "Frontend cannot bootstrap a demo session because it does not have the fixture files client-side. Needs either a dedicated backend endpoint (e.g. POST /api/sample/{name}) or the frontend must fetch fixture blobs from /public and post them as real File objects.", "affected_selectors": ["button:has-text('Load sample company')", "button:has-text('Clean startup')", "button:has-text('Messy startup')"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prism_api.py",
+    "/app/test_reports/pytest/pytest_results_iter2.xml"
+  ],
+  "action_items": [
+    "Fix Upload.tsx sample loaders: either add backend POST /api/sample/{clean|messy} that seeds a session from server-side fixtures, or ship fixture files under /public and have loadSampleInstantly()/loadSampleSet() fetch(blob) -> File -> FormData. The current filename-string fallback in api/client.ts:79 is dead code against the real backend.",
+    "Preview fix itself needs no further action — verified working."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/api/client.ts:79 — `formData.append('files', f.filename)` is a silent bug: it satisfies the TS type but produces a 422 against FastAPI. Either delete this branch and require File, or make it call a distinct endpoint.",
+    "vite.config.ts allowedHosts:true is broad; fine for a preview env but should be restricted for production.",
+    "No HMR now (production build served by vite preview) — any frontend edit requires a rebuild + supervisorctl restart frontend; document this in README so future iterations don't lose time."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (12/12 via public URL)", "frontend": "80% (all routes render, but the primary sample-company CTA is broken)"},
+  "test_credentials": "Authorization: Bearer demo-token (from /app/memory/test_credentials.md). sessionStorage.prism_auth_token is null on fresh load because VITE_FIREBASE_* are set so AuthContext waits for a real Google sign-in; unauthenticated API calls still work because backend accepts anonymous.",
+  "seed_data_creation": "None. Reused /tmp/fixtures/* from iteration_1.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Preview-loading fix (yarn start -> vite build && vite preview --host 0.0.0.0 --port 3000) is verified end-to-end. Frontend is now a static build with no HMR — rebuild via `cd /app/frontend && yarn build && sudo supervisorctl restart frontend` after any src change. Regression suite: `cd /app/backend && PRISM_BASE_URL=https://prism-check-1.preview.emergentagent.com pytest tests/test_prism_api.py -v`. Known open frontend bug: sample-company loader posts filename strings instead of files -> 422.",
+  "rca of the issue": "Original bug: `yarn start` ran Vite in dev mode; HMR websocket + on-demand transpile requests were causing Cloudflare/emergent proxy to keep serving the interstitial challenge indefinitely. Fix: switched supervisor's yarn start to `vite build && vite preview --host 0.0.0.0 --port 3000 --strictPort`, added allowedHosts:true and hmr wss:443 in vite.config.ts. Confirmed: index.html now references hashed dist assets, root mounts in ~2s, Cloudflare challenge no longer appears."
+}
