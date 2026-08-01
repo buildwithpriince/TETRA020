@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Prism — AI cross-document financial consistency checker
 
 Prism cross-references financial metrics across a startup's fundraising documents
@@ -87,3 +88,6 @@ frontend demo mode). Anonymous requests without any header are also accepted.
 `Ingesting → Extracting → Normalizing → Mapping ontology → Cross-referencing →
 Scoring materiality → Compiling report` — each stage updates the session row
 so the frontend's 1.5s status poll always has something fresh to render.
+=======
+# TETRA020
+>>>>>>> 5458e59c0d41caa726b6640fc21618a8b1e2367c
