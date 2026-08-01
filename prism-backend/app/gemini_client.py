@@ -17,8 +17,8 @@ from app.config import require_gemini_key
 
 logger = logging.getLogger("prism.gemini")
 
-_MODEL_TEXT = "gemini-2.5-pro"
-_MODEL_VISION = "gemini-2.5-pro"  # same model handles multimodal input
+_MODEL_TEXT = "gemini-2.5-flash"
+_MODEL_VISION = "gemini-2.5-flash"  # same model handles multimodal input
 
 
 def _client() -> genai.Client:
