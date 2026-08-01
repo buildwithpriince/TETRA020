@@ -1,0 +1,35 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# File parsing
+pdfplumber==0.11.4
+PyMuPDF==1.24.10
+python-pptx==1.0.2
+openpyxl==3.1.5
+pandas==2.2.3
+
+# File validation / security
+python-magic==0.4.27
+pyclamd==0.4.0
+
+# AI
+google-genai==0.3.0
+
+# PDF report generation
+weasyprint==62.3
+Jinja2==3.1.4
+pikepdf==9.3.0
+
+# Auth
+firebase-admin==6.5.0
+
+# Session store (optional Redis backend)
+redis==5.0.8
+
+# Rate limiting
+slowapi==0.1.9
+
+python-dotenv==1.0.1
