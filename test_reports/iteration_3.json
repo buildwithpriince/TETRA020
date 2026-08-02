@@ -1,0 +1,25 @@
+{
+  "summary": "Verified the /api/sample/{kind} fix end-to-end against the live preview URL. New backend endpoint returns 5 fixture files each for clean and messy sets with all 5 canonical detected_types (pitch_deck, mis, financials, projections, cap_table), missing_document_types is []. Full messy pipeline (upload -> analyze -> report) surfaces the intended Gemini-extracted conflicts: Revenue ₹2.0 Cr (deck) vs ₹1.6 Cr (MIS) as critical_red_flag, Active Customers 4,000 vs 2,100 as material_mismatch, Cap Table Sum 97% (verified_mismatch, critical_red_flag), plus ESOP Pool, Founder Ownership, Burn Rate, Cash Balance, Round Size, Valuation, TAM red flags — 15 matrix rows, readiness=36, 4 top_red_flags. Frontend UI: all three buttons on /upload ('Load sample company', 'Clean startup', 'Messy startup') succeed with no 422 error banner; each renders '5 files ingested' with correct detected_type chips (pitch_deck/mis/financials/projections/cap_table) and 'Ready' status. 'Load sample company' additionally auto-navigates to /dashboard and renders the full diligence report. Regression: existing POST /api/upload happy-path (real File objects) still 100% green (12/12 pytest tests in test_prism_api.py). Preview URL still loads with correct title.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_sample_endpoint.py",
+    "/app/backend/tests/test_prism_api.py",
+    "/app/test_reports/pytest/pytest_sample_iter3.xml",
+    "/app/test_reports/pytest/pytest_regression_iter3.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:157 — `kind = 'clean' if kind == 'clean' else 'messy'` silently coerces any other value to 'messy'. Works (no 500) but returning 400 for unknown kinds would be more RESTful; document the current behavior or narrow to an Enum path parameter.",
+    "sample_fixtures.py — fixtures are generated on first call under the process working dir; the .built marker means edits to the fixture generator will not regenerate files. If the fixture content is ever changed, add a schema/version key so the marker file invalidates automatically.",
+    "client.ts uploadDocuments() branch is now correct, but consider tightening types so `UploadedFileLite` disallows the (filename-only, no File) shape for the real-upload branch to prevent regressions."
+  ],
+  "updated_files": ["/app/backend/tests/test_sample_endpoint.py"],
+  "success_rate": {"backend": "100% (17/17: 5 new sample-endpoint tests + 12 regression)", "frontend": "100% (all 3 sample buttons + home load verified on public URL)"},
+  "test_credentials": "Authorization: Bearer demo-token; anonymous also accepted.",
+  "seed_data_creation": "Backend auto-generates /app/backend/sample_fixtures/{clean,messy}/*.pdf,xlsx,csv on first /api/sample/{kind} call (verified present with .built marker).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sample-loader fix verified end-to-end on https://prism-check-1.preview.emergentagent.com. Backend regression: `cd /app/backend && PRISM_BASE_URL=https://prism-check-1.preview.emergentagent.com pytest tests/ -v`. Messy pipeline uses Gemini (rate-limited free tier 5 RPM) — if flaky, back off ~30s. Frontend is a vite build served by `vite preview`; rebuild + supervisorctl restart frontend after any src change.",
+  "rca of the issue": "Root cause of the sample-loader bug from iteration_2: client.ts fallback branch POSTed filename strings to /api/upload (FastAPI UploadFile validator returned 422). Fix (this iteration): backend now exposes POST /api/sample/{kind} which seeds a session from bundled fixtures (generated once and cached under /app/backend/sample_fixtures/{kind}/ via sample_fixtures.py). client.ts uploadDocuments() detects the no-File case and calls /api/sample/{kind} instead. All 3 UI buttons and both fixture pipelines confirmed working."
+}

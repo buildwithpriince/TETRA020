@@ -73,10 +73,14 @@ export async function uploadDocuments(
   kind: 'clean' | 'messy' = 'messy',
 ): Promise<UploadResponse> {
   if (IS_MOCK) return mockUpload(files, kind);
+  const hasRealFiles = files.some((f) => f.file);
+  if (!hasRealFiles) {
+    // One-click sample bootstrap: backend has fixture files bundled.
+    return realRequest<UploadResponse>(`/api/sample/${kind}`, { method: 'POST' });
+  }
   const formData = new FormData();
   for (const f of files) {
     if (f.file) formData.append('files', f.file, f.filename);
-    else formData.append('files', f.filename);
   }
   return realRequest<UploadResponse>('/api/upload', { method: 'POST', body: formData });
 }

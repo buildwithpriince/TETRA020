@@ -4,12 +4,37 @@ import type { MatrixRow, MetricEntry } from '@/api/types';
  * Extracts a numeric value from a string like "₹2.0 Cr", "38%", "4,000", "3.1×/yr".
  * Returns null if no number can be parsed.
  */
+const UNIT_MULTIPLIERS: [RegExp, number][] = [
+  [/\bcr(ore)?s?\b/i, 1_00_00_000],
+  [/\blakh?s?\b|\bl\b/i, 1_00_000],
+  [/\bmn?\b|\bmillion\b/i, 1_000_000],
+  [/\bbn\b|\bbillion\b/i, 1_000_000_000],
+  [/\bk\b/i, 1_000],
+];
+
 function parseNumeric(value: string): number | null {
-  // Strip currency symbols, units, and whitespace
-  const cleaned = value.replace(/[₹$,%\s]/g, '').replace(/[a-zA-Z/×·-]+/g, '');
+  const raw = value.trim();
+  if (!raw) return null;
+
+  // Determine magnitude multiplier from unit words BEFORE stripping letters.
+  let multiplier = 1;
+  for (const [pattern, mult] of UNIT_MULTIPLIERS) {
+    if (pattern.test(raw)) {
+      multiplier = mult;
+      break;
+    }
+  }
+
+  // Strip currency symbols, commas, %, and remaining letters/symbols.
+  const cleaned = raw
+    .replace(/[₹$,%\s]/g, '')
+    .replace(/[a-zA-Z/×·-]+/g, '');
   if (!cleaned) return null;
-  const n = parseFloat(cleaned.replace(/,/g, ''));
-  return Number.isFinite(n) ? n : null;
+
+  const n = parseFloat(cleaned);
+  if (!Number.isFinite(n)) return null;
+
+  return n * multiplier;
 }
 
 /**
