@@ -52,6 +52,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:3000",
         "https://prism-check-1.preview.emergentagent.com",
+        "https://tetra-020.vercel.app",
     ],
     allow_origin_regex=r"https://.*\.preview\.emergentagent\.com",
     allow_credentials=True,
