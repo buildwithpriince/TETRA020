@@ -87,3 +87,5 @@ frontend demo mode). Anonymous requests without any header are also accepted.
 `Ingesting → Extracting → Normalizing → Mapping ontology → Cross-referencing →
 Scoring materiality → Compiling report` — each stage updates the session row
 so the frontend's 1.5s status poll always has something fresh to render.
+
+URL : tetra-020.vercel.app
